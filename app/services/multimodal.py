@@ -5,7 +5,7 @@ from typing import Any
 import base64
 import httpx
 
-from core.types import MessageType, ToolResult
+from core.types import MessageType, TaskType, ToolResult
 from app.llm.router import LLMRouter, get_router
 from app.memory.short_term import ShortTermMemory
 
@@ -38,15 +38,6 @@ class MultimodalService:
     ) -> dict[str, Any]:
         """
         Process a photo from Telegram.
-
-        Args:
-            user_id: User ID
-            file_path: Path or URL to the photo
-            caption: Optional caption from Telegram
-            prompt: Optional specific prompt for analysis
-
-        Returns:
-            Analysis result with description and any extracted information
         """
         try:
             image_data = await self._prepare_image(file_path)
@@ -76,6 +67,7 @@ class MultimodalService:
             response = await self.llm_router.chat_with_fallback(
                 messages=messages,
                 options=options,
+                task_type=TaskType.VISION_ANALYSIS,
             )
 
             return {
@@ -100,14 +92,6 @@ class MultimodalService:
     ) -> dict[str, Any]:
         """
         Process a voice message from Telegram.
-
-        Args:
-            user_id: User ID
-            file_path: Path or URL to the voice message
-            prompt: Optional prompt for additional context
-
-        Returns:
-            Transcription and analysis result
         """
         try:
             audio_data = await self._prepare_audio(file_path)
@@ -136,6 +120,7 @@ class MultimodalService:
             response = await self.llm_router.chat_with_fallback(
                 messages=messages,
                 options=options,
+                task_type=TaskType.AUDIO_TRANSCRIPTION,
             )
 
             return {
@@ -160,16 +145,6 @@ class MultimodalService:
     ) -> dict[str, Any]:
         """
         Process a video from Telegram.
-
-        Note: This is typically queued as a background task for heavy processing.
-
-        Args:
-            user_id: User ID
-            file_path: Path or URL to the video
-            prompt: Optional specific prompt for analysis
-
-        Returns:
-            Processing status and info
         """
         return {
             "success": True,
@@ -186,14 +161,6 @@ class MultimodalService:
     ) -> dict[str, Any]:
         """
         Process a document from Telegram.
-
-        Args:
-            user_id: User ID
-            file_path: Path or URL to the document
-            prompt: Optional specific prompt for analysis
-
-        Returns:
-            Processing status and info
         """
         return {
             "success": True,

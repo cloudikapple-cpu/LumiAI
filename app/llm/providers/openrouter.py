@@ -1,6 +1,5 @@
 """OpenRouter provider implementation."""
 
-import base64
 from typing import Any, AsyncIterator
 
 import httpx
@@ -23,50 +22,36 @@ class OpenRouterProvider(BaseLLMProvider):
     def available_models(self) -> list[ModelInfo]:
         return [
             ModelInfo(
-                model_id="anthropic/claude-3.5-sonnet",
+                model_id="moonshotai/kimi-k2.5",
                 provider="openrouter",
                 capabilities={
                     ModelCapability.TEXT,
                     ModelCapability.VISION,
+                    ModelCapability.AUDIO,
                     ModelCapability.TOOL_CALLING,
                     ModelCapability.REASONING,
                 },
-                max_tokens=8192,
-                cost_per_1k_input=0.003,
-                cost_per_1k_output=0.015,
-                avg_latency_ms=2000,
-                context_window=200_000,
+                max_tokens=32768,
+                cost_per_1k_input=0.0,
+                cost_per_1k_output=0.0,
+                avg_latency_ms=3000,
+                context_window=128_000,
             ),
             ModelInfo(
-                model_id="openai/gpt-4o",
+                model_id="meta-llama/llama-3.1-8b-instruct",
                 provider="openrouter",
                 capabilities={
                     ModelCapability.TEXT,
-                    ModelCapability.VISION,
                     ModelCapability.TOOL_CALLING,
                 },
                 max_tokens=8192,
-                cost_per_1k_input=0.005,
-                cost_per_1k_output=0.015,
+                cost_per_1k_input=0.0,
+                cost_per_1k_output=0.0,
                 avg_latency_ms=1500,
                 context_window=128_000,
             ),
             ModelInfo(
-                model_id="openai/gpt-4o-mini",
-                provider="openrouter",
-                capabilities={
-                    ModelCapability.TEXT,
-                    ModelCapability.VISION,
-                    ModelCapability.TOOL_CALLING,
-                },
-                max_tokens=16384,
-                cost_per_1k_input=0.00015,
-                cost_per_1k_output=0.0006,
-                avg_latency_ms=800,
-                context_window=128_000,
-            ),
-            ModelInfo(
-                model_id="google/gemini-1.5-pro",
+                model_id="google/gemini-1.5-flash",
                 provider="openrouter",
                 capabilities={
                     ModelCapability.TEXT,
@@ -74,23 +59,10 @@ class OpenRouterProvider(BaseLLMProvider):
                     ModelCapability.AUDIO,
                 },
                 max_tokens=8192,
-                cost_per_1k_input=0.00125,
-                cost_per_1k_output=0.005,
-                avg_latency_ms=1800,
+                cost_per_1k_input=0.0,
+                cost_per_1k_output=0.0,
+                avg_latency_ms=1000,
                 context_window=1_000_000,
-            ),
-            ModelInfo(
-                model_id="mistralai/mixtral-8x22b",
-                provider="openrouter",
-                capabilities={
-                    ModelCapability.TEXT,
-                    ModelCapability.TOOL_CALLING,
-                },
-                max_tokens=65536,
-                cost_per_1k_input=0.0007,
-                cost_per_1k_output=0.0024,
-                avg_latency_ms=3000,
-                context_window=64_000,
             ),
         ]
 
@@ -133,7 +105,7 @@ class OpenRouterProvider(BaseLLMProvider):
         formatted_messages = [self._format_message(msg) for msg in messages]
 
         request_data: dict[str, Any] = {
-            "model": options.model or "anthropic/claude-3.5-sonnet",
+            "model": options.model or "moonshotai/kimi-k2.5",
             "messages": formatted_messages,
             "temperature": options.temperature,
         }
@@ -196,7 +168,7 @@ class OpenRouterProvider(BaseLLMProvider):
         formatted_messages = [self._format_message(msg) for msg in messages]
 
         request_data: dict[str, Any] = {
-            "model": options.model or "anthropic/claude-3.5-sonnet",
+            "model": options.model or "moonshotai/kimi-k2.5",
             "messages": formatted_messages,
             "temperature": options.temperature,
             "stream": True,

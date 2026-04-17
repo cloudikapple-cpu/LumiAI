@@ -1,25 +1,19 @@
 """Multimodal service - handles images, audio, video, documents."""
 
 from typing import Any
-
 import base64
 import httpx
 
-from core.types import MessageType, TaskType, ToolResult
+from core.types import TaskType
 from app.llm.router import LLMRouter, get_router
 from app.memory.short_term import ShortTermMemory
 
 
 class MultimodalService:
-    """
-    Service for handling multimodal inputs (images, audio, video, documents).
+    """Service for handling multimodal inputs (images, audio, video, documents)."""
 
-    Responsibilities:
-    - Download and prepare media from Telegram
-    - Route to appropriate processing (vision, audio, video, document tools)
-    - Coordinate with LLM for analysis
-    - Return structured results
-    """
+    VISION_MODEL = "moonshotai/kimi-k2.5"
+    AUDIO_MODEL = "openai/gpt-4o-mini"
 
     def __init__(
         self,
@@ -36,30 +30,29 @@ class MultimodalService:
         caption: str | None = None,
         prompt: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Process a photo from Telegram.
-        """
+        """Process a photo from Telegram using kimi-k2.5."""
         try:
             image_data = await self._prepare_image(file_path)
 
-            analysis_prompt = prompt or (
-                "Analyze this image thoroughly. Provide a detailed description, "
-                "identify any text, objects, people, or notable features. "
-                f"User's question: {caption}" if caption else "Describe what you see."
-            )
-
             from core.interfaces import ChatMessage, ChatOptions
+
+            if caption:
+                user_prompt = f"User asked: {caption}\n\nPlease analyze this image thoroughly."
+            elif prompt:
+                user_prompt = prompt
+            else:
+                user_prompt = "Describe this image in detail."
 
             messages = [
                 ChatMessage(
                     role="user",
-                    content=analysis_prompt,
+                    content=user_prompt,
                     media_url=image_data,
                 )
             ]
 
             options = ChatOptions(
-                model="openai/gpt-4o",
+                model=self.VISION_MODEL,
                 temperature=0.7,
                 max_tokens=4096,
             )
@@ -78,9 +71,16 @@ class MultimodalService:
             }
 
         except Exception as e:
+            error_msg = str(e)
+            if "does not support image" in error_msg.lower() or "image" in error_msg.lower():
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "response": "I apologize, but this image format is not supported. Please try a different image (JPG, PNG, or WebP).",
+                }
             return {
                 "success": False,
-                "error": str(e),
+                "error": error_msg,
                 "response": "I apologize, but I encountered an error analyzing this image.",
             }
 
@@ -90,29 +90,22 @@ class MultimodalService:
         file_path: str,
         prompt: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Process a voice message from Telegram.
-        """
+        """Process a voice message from Telegram."""
         try:
             audio_data = await self._prepare_audio(file_path)
-
-            transcription_prompt = (
-                "Transcribe this audio accurately. If there's a specific question "
-                "or request in the audio, also address it."
-            )
 
             from core.interfaces import ChatMessage, ChatOptions
 
             messages = [
                 ChatMessage(
                     role="user",
-                    content=transcription_prompt,
+                    content="Please transcribe this audio and address any questions in it.",
                     media_url=audio_data,
                 )
             ]
 
             options = ChatOptions(
-                model="openai/gpt-4o",
+                model=self.AUDIO_MODEL,
                 temperature=0.3,
                 max_tokens=4096,
             )
@@ -143,9 +136,7 @@ class MultimodalService:
         file_path: str,
         prompt: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Process a video from Telegram.
-        """
+        """Process a video from Telegram."""
         return {
             "success": True,
             "status": "queued",
@@ -159,9 +150,7 @@ class MultimodalService:
         file_path: str,
         prompt: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Process a document from Telegram.
-        """
+        """Process a document from Telegram."""
         return {
             "success": True,
             "status": "queued",

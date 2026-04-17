@@ -1,0 +1,126 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lumiai-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-lumiai}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: lumiai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: lumiai-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lumiai-bot
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/lumiai
+      - REDIS_URL=redis://redis:6379/0
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - STORAGE_ENDPOINT=http://minio:9000
+      - STORAGE_ACCESS_KEY=${MINIO_USER:-minioadmin}
+      - STORAGE_SECRET_KEY=${MINIO_PASSWORD:-minioadmin}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - bot
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: lumiai-worker
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/lumiai
+      - REDIS_URL=redis://redis:6379/0
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - worker
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lumiai-api
+    command: python -m app.main --mode api
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/lumiai
+      - REDIS_URL=redis://redis:6379/0
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    ports:
+      - "8443:8443"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

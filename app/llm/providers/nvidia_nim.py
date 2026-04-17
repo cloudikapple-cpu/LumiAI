@@ -21,42 +21,32 @@ class NvidiaNimProvider(BaseLLMProvider):
     def available_models(self) -> list[ModelInfo]:
         return [
             ModelInfo(
-                model_id="nvidia/llama-3.1-nemotron-70b-instruct",
+                model_id="kimi/kimi-k2-thinking",
                 provider="nvidia_nim",
                 capabilities={
                     ModelCapability.TEXT,
                     ModelCapability.TOOL_CALLING,
+                    ModelCapability.REASONING,
                 },
-                max_tokens=4096,
-                cost_per_1k_input=0.0,
-                cost_per_1k_output=0.0,
-                avg_latency_ms=1500,
-                context_window=128_000,
-            ),
-            ModelInfo(
-                model_id="nvidia/mistral-nemo-mini-instruct",
-                provider="nvidia_nim",
-                capabilities={
-                    ModelCapability.TEXT,
-                },
-                max_tokens=4096,
-                cost_per_1k_input=0.0,
-                cost_per_1k_output=0.0,
-                avg_latency_ms=500,
-                context_window=128_000,
-            ),
-            ModelInfo(
-                model_id="mistralai/mixtral-8x22b-instruct-v0.1",
-                provider="nvidia_nim",
-                capabilities={
-                    ModelCapability.TEXT,
-                    ModelCapability.TOOL_CALLING,
-                },
-                max_tokens=4096,
+                max_tokens=8192,
                 cost_per_1k_input=0.0,
                 cost_per_1k_output=0.0,
                 avg_latency_ms=2000,
-                context_window=64_000,
+                context_window=128_000,
+            ),
+            ModelInfo(
+                model_id="minimax/minimax-m2.7",
+                provider="nvidia_nim",
+                capabilities={
+                    ModelCapability.TEXT,
+                    ModelCapability.TOOL_CALLING,
+                    ModelCapability.REASONING,
+                },
+                max_tokens=8192,
+                cost_per_1k_input=0.0,
+                cost_per_1k_output=0.0,
+                avg_latency_ms=2500,
+                context_window=128_000,
             ),
         ]
 
@@ -84,7 +74,7 @@ class NvidiaNimProvider(BaseLLMProvider):
         formatted_messages = [self._format_message(msg) for msg in messages]
 
         request_data: dict[str, Any] = {
-            "model": options.model or "nvidia/llama-3.1-nemotron-70b-instruct",
+            "model": options.model or "minimax/minimax-m2.7",
             "messages": formatted_messages,
             "temperature": options.temperature,
             "stream": False,
@@ -133,7 +123,7 @@ class NvidiaNimProvider(BaseLLMProvider):
         formatted_messages = [self._format_message(msg) for msg in messages]
 
         request_data: dict[str, Any] = {
-            "model": options.model or "nvidia/llama-3.1-nemotron-70b-instruct",
+            "model": options.model or "minimax/minimax-m2.7",
             "messages": formatted_messages,
             "temperature": options.temperature,
             "stream": True,

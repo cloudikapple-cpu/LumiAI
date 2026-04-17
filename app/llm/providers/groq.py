@@ -57,25 +57,12 @@ class GroqProvider(BaseLLMProvider):
                 avg_latency_ms=600,
                 context_window=32768,
             ),
-            ModelInfo(
-                model_id="whisper-large-v3",
-                provider="groq",
-                capabilities={
-                    ModelCapability.AUDIO,
-                },
-                max_tokens=0,
-                cost_per_1k_input=0.0,
-                cost_per_1k_output=0.0,
-                avg_latency_ms=1000,
-                context_window=0,
-            ),
         ]
 
     @property
     def supports_capabilities(self) -> set[ModelCapability]:
         return {
             ModelCapability.TEXT,
-            ModelCapability.AUDIO,
             ModelCapability.TOOL_CALLING,
         }
 

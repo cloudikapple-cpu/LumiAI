@@ -11,7 +11,7 @@ from app.llm.providers.base import BaseLLMProvider
 
 
 class GroqProvider(BaseLLMProvider):
-    """Groq provider - fast inference for text tasks."""
+    """Groq provider - fast inference for text and audio transcription."""
 
     @property
     def provider_name(self) -> str:
@@ -46,16 +46,16 @@ class GroqProvider(BaseLLMProvider):
                 context_window=128_000,
             ),
             ModelInfo(
-                model_id="mixtral-8x7b-32768",
+                model_id="whisper-large-v3-turbo",
                 provider="groq",
                 capabilities={
-                    ModelCapability.TEXT,
+                    ModelCapability.AUDIO,
                 },
-                max_tokens=32768,
-                cost_per_1k_input=0.00024,
-                cost_per_1k_output=0.00024,
-                avg_latency_ms=600,
-                context_window=32768,
+                max_tokens=0,
+                cost_per_1k_input=0.0,
+                cost_per_1k_output=0.0,
+                avg_latency_ms=1000,
+                context_window=0,
             ),
         ]
 
@@ -63,6 +63,7 @@ class GroqProvider(BaseLLMProvider):
     def supports_capabilities(self) -> set[ModelCapability]:
         return {
             ModelCapability.TEXT,
+            ModelCapability.AUDIO,
             ModelCapability.TOOL_CALLING,
         }
 

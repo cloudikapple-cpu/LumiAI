@@ -38,18 +38,7 @@ class LLMRouter:
 
     def get_provider_for_task(self, task_type: TaskType) -> BaseLLMProvider:
         """Get the best provider for a given task type."""
-        if task_type == TaskType.VISION_ANALYSIS:
-            required = {ModelCapability.VISION}
-        elif task_type == TaskType.AUDIO_TRANSCRIPTION:
-            required = {ModelCapability.AUDIO}
-        elif task_type == TaskType.VIDEO_ANALYSIS:
-            required = {ModelCapability.VISION, ModelCapability.AUDIO}
-        elif task_type == TaskType.WEB_SEARCH:
-            required = {ModelCapability.TEXT, ModelCapability.TOOL_CALLING}
-        elif task_type == TaskType.CODE:
-            required = {ModelCapability.TEXT}
-        else:
-            required = {ModelCapability.TEXT}
+        required = self._get_required_capabilities(task_type)
 
         for capability in required:
             provider_names = self._capability_map.get(capability, [])
@@ -59,6 +48,23 @@ class LLMRouter:
                     return provider
 
         return self._get_default_provider()
+
+    def _get_required_capabilities(self, task_type: TaskType) -> set[ModelCapability]:
+        """Get required capabilities for a task type."""
+        if task_type == TaskType.VISION_ANALYSIS:
+            return {ModelCapability.VISION}
+        elif task_type == TaskType.AUDIO_TRANSCRIPTION:
+            return {ModelCapability.AUDIO}
+        elif task_type == TaskType.VIDEO_ANALYSIS:
+            return {ModelCapability.VISION, ModelCapability.AUDIO}
+        elif task_type == TaskType.WEB_SEARCH:
+            return {ModelCapability.TEXT, ModelCapability.TOOL_CALLING}
+        return {ModelCapability.TEXT}
+
+    def _provider_has_capabilities(self, provider: BaseLLMProvider, task_type: TaskType) -> bool:
+        """Check if provider has models with required capabilities for task."""
+        required = self._get_required_capabilities(task_type)
+        return required.issubset(provider.supports_capabilities)
 
     def _get_default_provider(self) -> BaseLLMProvider:
         """Get the default provider."""
@@ -93,9 +99,11 @@ class LLMRouter:
         """Route with fallback on failure."""
         errors = []
 
+        required_caps = self._get_required_capabilities(task_type)
+
         if preferred_provider:
             provider = self._providers.get(preferred_provider)
-            if provider:
+            if provider and required_caps.issubset(provider.supports_capabilities):
                 try:
                     return await provider.chat(messages, options)
                 except Exception as e:
@@ -112,6 +120,8 @@ class LLMRouter:
 
         for name, alt_provider in self._providers.items():
             if name == provider.provider_name:
+                continue
+            if not required_caps.issubset(alt_provider.supports_capabilities):
                 continue
             try:
                 return await alt_provider.chat(messages, options)
